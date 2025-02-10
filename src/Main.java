@@ -19,18 +19,22 @@ public class Main extends Application {
 
     short[][][] datasetVoxelByteValuesTop; //byte values of 3D dataset from top view
     float[][][] datasetGreyValueTop; //normalised grey value for top dataset used in coloring images
-    VBox topVbox; //the top view of the CThead
+    VBox topVboxSlice; //the top view of the CThead
     int currentTopSlice = 128; //the current viewed slice of the CT scan for the top view
+    float[][] maximumIntensityProjectionImageTop; //The MIP for the top view
+    VBox topVboxMIP;
 
-    short[][][] datasetVoxelByteValuesFront; //byte values of 3D dataset from front view
     float[][][] datasetGreyValueFront; //normalised grey value for front dataset used in coloring images
-    VBox frontVbox;
+    VBox frontVboxSlice;
     int currentFrontSlice = 128; //the current viewed slice of the CT scan for the front view
+    float[][] maximumIntensityProjectionImageFront; //The MIP for the front view
+    VBox frontVboxMIP;
 
-    short[][][] datasetVoxelByteValuesSide; //byte values of 3D dataset from side view
     float[][][] datasetGreyValueSide; //normalised grey value for side dataset used in coloring images
-    VBox sideVbox;
+    VBox sideVboxSlice;
     int currentSideSlice = 128; //the current viewed slice of the CT scan for the side view
+    float[][] maximumIntensityProjectionImageSide; //The MIP for the side view
+    VBox sideVboxMIP;
 
     public final static int IMAGE_WIDTH = 256; //the width of view in the dataset
     public final static int IMAGE_HEIGHT = 256; //the height of every view in the dataset
@@ -66,8 +70,6 @@ public class Main extends Application {
                 }
             }
         }
-
-        normaliseDatasetValues(); //for the top only (currently) normalise the values to intensities for use in grey
     }
         public void normaliseDatasetValues() {
             //normalise the byte values from the top dataset and add to a new dataset
@@ -101,6 +103,40 @@ public class Main extends Application {
             }
         }
 
+    public void generateMaximumIntensityProjectionDatasets() {
+        maximumIntensityProjectionImageTop = new float[256][256];
+        for (int y = 0; y < IMAGE_HEIGHT; y++) {
+            for (int x = 0; x < IMAGE_WIDTH; x++) {
+                maximumIntensityProjectionImageTop[y][x] = returnMaxFromRay(datasetGreyValueTop, x, y);
+            }
+        }
+
+        maximumIntensityProjectionImageFront = new float[256][256];
+        for (int y = 0; y < IMAGE_HEIGHT; y++) {
+            for (int x = 0; x < IMAGE_WIDTH; x++) {
+                maximumIntensityProjectionImageFront[y][x] = returnMaxFromRay(datasetGreyValueFront, x, y);
+            }
+        }
+
+        maximumIntensityProjectionImageSide = new float[256][256];
+        for (int y = 0; y < IMAGE_HEIGHT; y++) {
+            for (int x = 0; x < IMAGE_WIDTH; x++) {
+                maximumIntensityProjectionImageSide[y][x] = returnMaxFromRay(datasetGreyValueSide, x, y);
+            }
+        }
+    }
+        public float returnMaxFromRay(float[][][] dataset, int x, int y) {
+
+            float currentMaximum = min;
+            for (int k = 0; k < IMAGE_DEPTH; k++) {
+                if (dataset[k][y][x] > currentMaximum) {
+                    currentMaximum = dataset[k][y][x];
+                }
+            }
+
+            return currentMaximum;
+        }
+
     /**Write a new image for the sliced view of the CT scan head (the side being dependent on what string you pass in)*/
     public WritableImage writeNewImage(String imageToWrite){
         WritableImage newImage = new WritableImage(IMAGE_WIDTH, IMAGE_HEIGHT);
@@ -109,17 +145,41 @@ public class Main extends Application {
         float[][][] dataset;
         int slice;
 
-        if (imageToWrite.equals("Top")) {
-            dataset = datasetGreyValueTop;
-            slice = currentTopSlice;
-        }
-        else if (imageToWrite.equals("Front")) {
-            dataset = datasetGreyValueFront;
-            slice = currentFrontSlice;
-        }
-        else {
-            dataset = datasetGreyValueSide;
-            slice = currentSideSlice;
+        switch(imageToWrite) {
+            case "TopSlice":
+                dataset = datasetGreyValueTop;
+                slice = currentTopSlice;
+                break;
+            case "FrontSlice":
+                dataset = datasetGreyValueFront;
+                slice = currentFrontSlice;
+                break;
+            case "SideSlice":
+                dataset = datasetGreyValueSide;
+                slice = currentSideSlice;
+                break;
+            case "TopMIP": //temporarily convert to 3D array to match datatype requirements, (slice must be 0)
+                float[][][] temp3DimensionalDataTop = new float[1][256][256];
+                temp3DimensionalDataTop[0] = maximumIntensityProjectionImageTop;
+                dataset = temp3DimensionalDataTop;
+                slice = 0;
+                break;
+            case "FrontMIP":
+                float[][][] temp3DimensionalDataFront = new float[1][256][256];
+                temp3DimensionalDataFront[0] = maximumIntensityProjectionImageFront;
+                dataset = temp3DimensionalDataFront;
+                slice = 0;
+                break;
+            case "SideMIP":
+                float[][][] temp3DimensionalDataSide = new float[1][256][256];
+                temp3DimensionalDataSide[0] = maximumIntensityProjectionImageSide;
+                dataset = temp3DimensionalDataSide;
+                slice = 0;
+                break;
+            default: //TODO change this on submission, maybe have it throw an error instead
+                dataset = datasetGreyValueTop;
+                slice = currentTopSlice;
+                break;
         }
 
         /*Write pixel by pixel the normalised values of the CT scan*/
@@ -147,6 +207,9 @@ public class Main extends Application {
             System.out.println(error);
         }
 
+        normaliseDatasetValues();
+        generateMaximumIntensityProjectionDatasets();
+
         /**Initalize a new grid pane*/
         GridPane grid = new GridPane(); //A newly initialised pane to display on the stage
         grid.setHgap(1); // Horizontal gap between cells
@@ -154,9 +217,12 @@ public class Main extends Application {
 
 
         /**Wrap your writable image in an "ImageView" so you can display it on a grid (needs to be a node)*/
-        ImageView topWritableImageView = new ImageView(writeNewImage("Top"));
-        ImageView frontWritableImageView = new ImageView(writeNewImage("Front"));
-        ImageView sideWritableImageView = new ImageView(writeNewImage("Side"));
+        ImageView topWritableImageView = new ImageView(writeNewImage("TopSlice"));
+        ImageView frontWritableImageView = new ImageView(writeNewImage("FrontSlice"));
+        ImageView sideWritableImageView = new ImageView(writeNewImage("SideSlice"));
+        ImageView topMIP = new ImageView(writeNewImage("TopMIP"));
+        ImageView frontMIP = new ImageView(writeNewImage("FrontMIP"));
+        ImageView sideMIP = new ImageView(writeNewImage("SideMIP"));
 
         /**Set up a sliders with a listener that changes the image of the relevant picture*/
         //topSlider
@@ -165,7 +231,7 @@ public class Main extends Application {
         topSlider.setSnapToTicks(false); //ensure there is no snapping (smooth transition through images)
         topSlider.valueProperty().addListener((observable, oldValue, newValue) -> {
                 currentTopSlice = newValue.intValue();
-                topWritableImageView.setImage(writeNewImage("Top"));
+                topWritableImageView.setImage(writeNewImage("TopSlice"));
         });
 
         //frontSlider
@@ -174,7 +240,7 @@ public class Main extends Application {
         frontSlider.setSnapToTicks(false);
         frontSlider.valueProperty().addListener((observable, oldValue, newValue) -> {
             currentFrontSlice = newValue.intValue();
-            frontWritableImageView.setImage(writeNewImage("Front"));
+            frontWritableImageView.setImage(writeNewImage("FrontSlice"));
         });
 
         //sideSlider
@@ -183,24 +249,36 @@ public class Main extends Application {
         sideSlider.setSnapToTicks(false);
         sideSlider.valueProperty().addListener((observable, oldValue, newValue) -> {
             currentSideSlice = newValue.intValue();
-            sideWritableImageView.setImage(writeNewImage("Side"));
+            sideWritableImageView.setImage(writeNewImage("SideSlice"));
         });
 
 
 
-        /**Set up vboxes to display each view*/
-        topVbox = new VBox(10); //10 vertical pixels between images in vbox
-        topVbox.getChildren().addAll(topWritableImageView, topSlider); //add both the top writable image and slider to vbox
-        grid.add(topVbox, 1, 1);
+        /**Set up vboxes to display each view (top 3 are the slices, middle 3 are MIP, last 3 are volume renders)*/
+        topVboxSlice = new VBox(10);
+        topVboxSlice.getChildren().addAll(topWritableImageView, topSlider);
+        grid.add(topVboxSlice, 1, 1);
 
-        frontVbox = new VBox(10);
-        frontVbox.getChildren().addAll(frontWritableImageView, frontSlider);
-        grid.add(frontVbox, 2, 1);
+        frontVboxSlice = new VBox(10);
+        frontVboxSlice.getChildren().addAll(frontWritableImageView, frontSlider);
+        grid.add(frontVboxSlice, 2, 1);
 
-        sideVbox = new VBox(10);
-        sideVbox.getChildren().addAll(sideWritableImageView, sideSlider);
-        grid.add(sideVbox, 3, 1);
+        sideVboxSlice = new VBox(10);
+        sideVboxSlice.getChildren().addAll(sideWritableImageView, sideSlider);
+        grid.add(sideVboxSlice, 3, 1);
 
+
+        topVboxMIP = new VBox(10);
+        topVboxMIP.getChildren().add(topMIP);
+        grid.add(topVboxMIP, 1, 2);
+
+        frontVboxMIP = new VBox(10);
+        frontVboxMIP.getChildren().add(frontMIP);
+        grid.add(frontVboxMIP, 2, 2);
+
+        sideVboxMIP = new VBox(10);
+        sideVboxMIP.getChildren().add(sideMIP);
+        grid.add(sideVboxMIP, 3, 2);
 
         Scene scene = new Scene(grid, IMAGE_WIDTH * 4, IMAGE_HEIGHT * 4); //scene(currentpane, xpixelsWide, ypixelsWide)
         stage.setScene(scene); //set that scene onto the stage
