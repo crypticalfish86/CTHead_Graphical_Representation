@@ -1,6 +1,8 @@
 import java.io.*;
 import javafx.application.Application;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
+import javafx.scene.control.Label;
 import javafx.scene.layout.*;
 import javafx.scene.control.Slider;
 import javafx.scene.image.ImageView;
@@ -11,8 +13,8 @@ import javafx.stage.Stage;
 public class Main extends Application {
     public static final String CT_HEAD_FILEPATH = "CThead-256cubed.bin"; //filepath for 3D dataset
     public static final int DATA_SIZE = 256; //the constant width, height and depth of the dataset;
-    short[][][] datasetVoxelByteValues;
-    float[][][] datasetGreyValues;
+    short[][][] datasetVoxelByteValues; //A 3D dataset to store the byte values of the CT scan
+    float[][][] datasetGreyValues; //A 3D dataset to store the normalised values(0-1) of the byte dataset
     int currentTopSlice = 128; //the current viewed slice of the CT scan for the top view
     int currentFrontSlice = 128; //the current viewed slice of the CT scan for the front view
     int currentSideSlice = 128; //the current viewed slice of the CT scan for the side view
@@ -159,6 +161,7 @@ public class Main extends Application {
         GridPane grid = new GridPane();
         grid.setHgap(1); // Horizontal gap in pixels between grid cells
         grid.setVgap(1); // Vertical gap in pixels between grid cells
+        grid.setAlignment(Pos.TOP_CENTER);
 
 
         /*Set up a sliders with a listener that updates the image of the relevant picture to the slice value of the slider*/
@@ -191,17 +194,29 @@ public class Main extends Application {
 
 
 
-        /*Set up vboxes to display each view (top 3 are the slices, middle 3 are MIP, last 3 are volume renders)*/
+        /*Set up vboxes and titles to display each view (top 3 are the slices, middle 3 are MIP, last 3 are volume renders)*/
         VBox topVboxSlice = new VBox(10);
-        topVboxSlice.getChildren().addAll(topSliceView, topSlider);
+        Label topLabel = new Label("Top View");
+        topLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
+        topLabel.setMaxWidth(Double.MAX_VALUE);
+        topLabel.setAlignment(Pos.CENTER);
+        topVboxSlice.getChildren().addAll(topLabel, topSliceView, topSlider);
         grid.add(topVboxSlice, 1, 1);
 
         VBox frontVboxSlice = new VBox(10);
-        frontVboxSlice.getChildren().addAll(frontSliceView, frontSlider);
+        Label frontLabel = new Label("Front View");
+        frontLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold");
+        frontLabel.setMaxWidth(Double.MAX_VALUE);
+        frontLabel.setAlignment(Pos.CENTER);
+        frontVboxSlice.getChildren().addAll(frontLabel, frontSliceView, frontSlider);
         grid.add(frontVboxSlice, 2, 1);
 
         VBox sideVboxSlice = new VBox(10);
-        sideVboxSlice.getChildren().addAll(sideSliceView, sideSlider);
+        Label sideLabel = new Label("Side View");
+        sideLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold");
+        sideLabel.setMaxWidth(Double.MAX_VALUE);
+        sideLabel.setAlignment(Pos.CENTER);
+        sideVboxSlice.getChildren().addAll(sideLabel, sideSliceView, sideSlider);
         grid.add(sideVboxSlice, 3, 1);
 
 
