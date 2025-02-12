@@ -1,17 +1,12 @@
 import java.io.*;
-import java.util.InputMismatchException;
 
 import javafx.application.Application;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.scene.Scene;
 import javafx.scene.layout.*;
 import javafx.scene.control.Slider;
-import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.image.WritableImage;
 import javafx.scene.image.PixelWriter;
-import javafx.scene.shape.*;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 public class Main extends Application {
@@ -69,56 +64,47 @@ public class Main extends Application {
             }
         }
     }
-        public void normaliseDatasetValues() {
-            //normalise the byte values from the top dataset and add to a new dataset
-            datasetGreyValueTop = new float[DATA_SIZE][DATA_SIZE][DATA_SIZE];
-            for (int z = 0; z < DATA_SIZE; z++) {
-                for (int y = 0; y < DATA_SIZE; y++) {
-                    for (int x = 0; x < DATA_SIZE; x++) {
-                        datasetGreyValueTop[z][y][x] =  ((float) datasetVoxelByteValuesTop[z][y][x] - (float) min) / ((float) max - (float) min);
-                    }
-                }
-            }
-
-            //used the normalised top dataset to fill the values in the front dataset (z,x,y -> y,z,x)
-            datasetGreyValueFront = new float[DATA_SIZE][DATA_SIZE][DATA_SIZE];
+    public void normaliseDatasetValues() {
+        //normalise the byte values from the top dataset and add to a new dataset
+        datasetGreyValueTop = new float[DATA_SIZE][DATA_SIZE][DATA_SIZE];
+        for (int z = 0; z < DATA_SIZE; z++) {
             for (int y = 0; y < DATA_SIZE; y++) {
-                for (int z = 0; z < DATA_SIZE; z++) {
-                    for (int x = 0; x < DATA_SIZE; x++) {
-                        datasetGreyValueFront[y][z][x] = datasetGreyValueTop[z][y][x];
-                    }
-                }
-            }
-
-            //use normalised top dataset to fill the values in the side dataset (z,x,y -> x,z,y)
-            datasetGreyValueSide = new float[DATA_SIZE][DATA_SIZE][DATA_SIZE];
-            for (int x = 0; x < DATA_SIZE; x++) {
-                for (int z = 0; z < DATA_SIZE; z++) {
-                    for (int y = 0; y < DATA_SIZE; y++) {
-                        datasetGreyValueSide[x][z][y] = datasetGreyValueTop[z][y][x];
-                    }
+                for (int x = 0; x < DATA_SIZE; x++) {
+                    datasetGreyValueTop[z][y][x] =  ((float) datasetVoxelByteValuesTop[z][y][x] - (float) min) / ((float) max - (float) min);
                 }
             }
         }
+
+        //used the normalised top dataset to fill the values in the front dataset (z,x,y -> y,z,x)
+        datasetGreyValueFront = new float[DATA_SIZE][DATA_SIZE][DATA_SIZE];
+        for (int y = 0; y < DATA_SIZE; y++) {
+            for (int z = 0; z < DATA_SIZE; z++) {
+                for (int x = 0; x < DATA_SIZE; x++) {
+                    datasetGreyValueFront[y][z][x] = datasetGreyValueTop[z][y][x];
+                }
+            }
+        }
+
+        //use normalised top dataset to fill the values in the side dataset (z,x,y -> x,z,y)
+        datasetGreyValueSide = new float[DATA_SIZE][DATA_SIZE][DATA_SIZE];
+        for (int x = 0; x < DATA_SIZE; x++) {
+            for (int z = 0; z < DATA_SIZE; z++) {
+                for (int y = 0; y < DATA_SIZE; y++) {
+                    datasetGreyValueSide[x][z][y] = datasetGreyValueTop[z][y][x];
+                }
+            }
+        }
+    }
 
     public void generateMaximumIntensityProjectionDatasets() {
         maximumIntensityProjectionImageTop = new float[DATA_SIZE][DATA_SIZE];
+        maximumIntensityProjectionImageFront = new float[DATA_SIZE][DATA_SIZE];
+        maximumIntensityProjectionImageSide = new float[DATA_SIZE][DATA_SIZE];
+
         for (int y = 0; y < DATA_SIZE; y++) {
             for (int x = 0; x < DATA_SIZE; x++) {
                 maximumIntensityProjectionImageTop[y][x] = returnMaxFromRay(datasetGreyValueTop, x, y);
-            }
-        }
-
-        maximumIntensityProjectionImageFront = new float[DATA_SIZE][DATA_SIZE];
-        for (int y = 0; y < DATA_SIZE; y++) {
-            for (int x = 0; x < DATA_SIZE; x++) {
                 maximumIntensityProjectionImageFront[y][x] = returnMaxFromRay(datasetGreyValueFront, x, y);
-            }
-        }
-
-        maximumIntensityProjectionImageSide = new float[DATA_SIZE][DATA_SIZE];
-        for (int y = 0; y < DATA_SIZE; y++) {
-            for (int x = 0; x < DATA_SIZE; x++) {
                 maximumIntensityProjectionImageSide[y][x] = returnMaxFromRay(datasetGreyValueSide, x, y);
             }
         }
