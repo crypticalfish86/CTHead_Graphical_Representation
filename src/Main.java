@@ -22,6 +22,7 @@ public class Main extends Application {
     short min = Short.MAX_VALUE; //minimum byte value in dataset (used in normalisation, initialised at max value)
     short max = Short.MIN_VALUE; //maximum byte value in dataset (used in normalisation, initialised at min value)
     float opacityThreshold = 0.03f;
+    float skinOpacity = 0.12f;
 
     /**
      * Reads data and places the values of each voxel in datasetVoxelByteValues
@@ -123,75 +124,63 @@ public class Main extends Application {
 
             for (int y = 0; y < DATA_SIZE; y++) {
                 for (int x = 0; x < DATA_SIZE; x++) {
-                    int accumOpacity = 1;
-                    HashMap<String, Float> accumPixelColour = new HashMap<String, Float>();
-                    accumPixelColour.put("red", 0f);
-                    accumPixelColour.put("green", 0f);
-                    accumPixelColour.put("blue", 0f);
-                    accumPixelColour = returnAccumulatedColourFromRay(x, y, 0, imageKey, accumPixelColour, accumOpacity, 1);
-                    Color color = Color.color(Math.min(accumPixelColour.get("red"), 1f), Math.min(accumPixelColour.get("green"), 1f), Math.min(accumPixelColour.get("blue"), 1f));
+                    float accumOpacity = 1f;
+                    float accumRed = 0f;
+                    float accumGreen = 0f;
+                    float accumBlue = 0f;
+                    float lighting = 1f;//TODO when depth based shading implemented this changes
+
+                    for (int slice = 0; slice < DATA_SIZE; slice++) {
+                        if (accumOpacity < opacityThreshold) {
+                            break;
+                        }
+                        short voxelToRead = switch (imageKey) {
+                            case "Front" -> datasetVoxelByteValues[y][slice][x];
+                            case "Side" -> datasetVoxelByteValues[y][x][slice];
+                            default -> datasetVoxelByteValues[slice][y][x];
+                        };
+
+
+                        float voxelRed;
+                        float voxelGreen;
+                        float voxelBlue;
+                        float voxelOpacity;
+
+                        if (voxelToRead < -300) {
+                            voxelRed = 0f;
+                            voxelGreen = 0f;
+                            voxelBlue = 0f;
+                            voxelOpacity = 0f;
+                        }
+                        else if (voxelToRead < 50) {
+                            voxelRed = 0.82f;
+                            voxelGreen = 0.49f;
+                            voxelBlue = 0.18f;
+                            voxelOpacity = skinOpacity;
+                        }
+                        else if (voxelToRead < 300) {
+                            voxelRed = 0f;
+                            voxelGreen = 0f;
+                            voxelBlue = 0f;
+                            voxelOpacity = 0f;
+                        }
+                        else {
+                            voxelRed = 1f;
+                            voxelGreen = 1f;
+                            voxelBlue = 1f;
+                            voxelOpacity = 0.8f;
+                        }
+
+                        accumRed += accumOpacity * voxelOpacity * lighting * voxelRed;
+                        accumGreen += accumOpacity * voxelOpacity * lighting * voxelGreen;
+                        accumBlue += accumOpacity * voxelOpacity * lighting * voxelBlue;
+                        accumOpacity *= (1 - voxelOpacity);
+                    }
+                    Color color = Color.color(Math.min(accumRed, 1f), Math.min(accumGreen, 1f), Math.min(accumBlue, 1f));
                     newWriter.setColor(x, y, color);
                 }
             }
     }
-        private HashMap<String, Float> returnAccumulatedColourFromRay(int x, int y, int slice,  String imageKey, HashMap<String, Float> accumPixelColour, float accumOpacity, float lighting) {
-            if (accumOpacity < opacityThreshold || slice >= DATA_SIZE) {
-                return accumPixelColour;
-            }
-            else {
-
-                short byteInDataset = switch (imageKey) {
-                    case "Top" -> datasetVoxelByteValues[slice][y][x];
-                    case "Front" -> datasetVoxelByteValues[y][slice][x];
-                    case "Side" -> datasetVoxelByteValues[y][x][slice];
-                    default -> Short.MAX_VALUE;
-                };
-
-                float accumRed = accumPixelColour.get("red");
-                float accumGreen = accumPixelColour.get("green");
-                float accumBlue = accumPixelColour.get("blue");
-
-                float currentRed;
-                float currentGreen;
-                float currentBlue;
-                float currentOpacity;
-                if (byteInDataset < -300) {
-                    currentRed = 0f;
-                    currentGreen = 0f;
-                    currentBlue = 0f;
-                    currentOpacity = 0f;
-                }
-                else if (byteInDataset < 50) {
-                    currentRed = 0.82f;
-                    currentGreen = 0.49f;
-                    currentBlue = 0.18f;
-                    currentOpacity = 0.12f;
-                }
-                else if (byteInDataset < 300) {
-                    currentRed = 0f;
-                    currentGreen = 0f;
-                    currentBlue = 0f;
-                    currentOpacity = 0;
-                }
-                else {
-                    currentRed = 1f;
-                    currentGreen = 1f;
-                    currentBlue = 1f;
-                    currentOpacity = 0.8f;
-                }
-
-                accumRed += currentOpacity * lighting * currentRed;
-                accumGreen += currentOpacity * lighting * currentGreen;
-                accumBlue += currentOpacity * lighting * currentBlue;
-                float newAccumOpacity = accumOpacity * (1f - currentOpacity);
-
-                accumPixelColour.put("red", accumRed);
-                accumPixelColour.put("green", accumGreen);
-                accumPixelColour.put("blue", accumBlue);
-
-                return returnAccumulatedColourFromRay(x, y, slice + 1, imageKey, accumPixelColour, newAccumOpacity, lighting);
-            }
-        }
 
     /*Set up the stage for launch*/
     @Override
