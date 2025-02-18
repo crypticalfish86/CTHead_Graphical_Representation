@@ -1,4 +1,5 @@
 import java.io.*;
+import java.util.HashMap;
 import javafx.application.Application;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -20,7 +21,7 @@ public class Main extends Application {
     int currentSideSlice = 128; //the current viewed slice of the CT scan for the side view
     short min = Short.MAX_VALUE; //minimum byte value in dataset (used in normalisation, initialised at max value)
     short max = Short.MIN_VALUE; //maximum byte value in dataset (used in normalisation, initialised at min value)
-
+    float opacityThreshold = 0.03f;
 
     /**
      * Reads data and places the values of each voxel in datasetVoxelByteValues
@@ -117,8 +118,82 @@ public class Main extends Application {
             return currentMaximum;
         }
 
+    public void updateVolumeRender(WritableImage image, String imageKey) {
+            PixelWriter newWriter = image.getPixelWriter();
 
-    //set up stage
+            for (int y = 0; y < DATA_SIZE; y++) {
+                for (int x = 0; x < DATA_SIZE; x++) {
+                    int accumOpacity = 1;
+                    HashMap<String, Float> accumPixelColour = new HashMap<String, Float>();
+                    accumPixelColour.put("red", 0f);
+                    accumPixelColour.put("green", 0f);
+                    accumPixelColour.put("blue", 0f);
+                    accumPixelColour = returnAccumulatedColourFromRay(x, y, 0, imageKey, accumPixelColour, accumOpacity, 1);
+                    Color color = Color.color(Math.min(accumPixelColour.get("red"), 1f), Math.min(accumPixelColour.get("green"), 1f), Math.min(accumPixelColour.get("blue"), 1f));
+                    newWriter.setColor(x, y, color);
+                }
+            }
+    }
+        private HashMap<String, Float> returnAccumulatedColourFromRay(int x, int y, int slice,  String imageKey, HashMap<String, Float> accumPixelColour, float accumOpacity, float lighting) {
+            if (accumOpacity < opacityThreshold || slice >= DATA_SIZE) {
+                return accumPixelColour;
+            }
+            else {
+
+                short byteInDataset = switch (imageKey) {
+                    case "Top" -> datasetVoxelByteValues[slice][y][x];
+                    case "Front" -> datasetVoxelByteValues[y][slice][x];
+                    case "Side" -> datasetVoxelByteValues[y][x][slice];
+                    default -> Short.MAX_VALUE;
+                };
+
+                float accumRed = accumPixelColour.get("red");
+                float accumGreen = accumPixelColour.get("green");
+                float accumBlue = accumPixelColour.get("blue");
+
+                float currentRed;
+                float currentGreen;
+                float currentBlue;
+                float currentOpacity;
+                if (byteInDataset < -300) {
+                    currentRed = 0f;
+                    currentGreen = 0f;
+                    currentBlue = 0f;
+                    currentOpacity = 0f;
+                }
+                else if (byteInDataset < 50) {
+                    currentRed = 0.82f;
+                    currentGreen = 0.49f;
+                    currentBlue = 0.18f;
+                    currentOpacity = 0.12f;
+                }
+                else if (byteInDataset < 300) {
+                    currentRed = 0f;
+                    currentGreen = 0f;
+                    currentBlue = 0f;
+                    currentOpacity = 0;
+                }
+                else {
+                    currentRed = 1f;
+                    currentGreen = 1f;
+                    currentBlue = 1f;
+                    currentOpacity = 0.8f;
+                }
+
+                accumRed += currentOpacity * lighting * currentRed;
+                accumGreen += currentOpacity * lighting * currentGreen;
+                accumBlue += currentOpacity * lighting * currentBlue;
+                float newAccumOpacity = accumOpacity * (1f - currentOpacity);
+
+                accumPixelColour.put("red", accumRed);
+                accumPixelColour.put("green", accumGreen);
+                accumPixelColour.put("blue", accumBlue);
+
+                return returnAccumulatedColourFromRay(x, y, slice + 1, imageKey, accumPixelColour, newAccumOpacity, lighting);
+            }
+        }
+
+    /*Set up the stage for launch*/
     @Override
     public void start(Stage stage) {
         stage.setTitle("CS-256 Coursework");
@@ -146,6 +221,13 @@ public class Main extends Application {
         WritableImage sideMIPImage = new WritableImage(DATA_SIZE, DATA_SIZE);
         writeMIP(sideMIPImage, "Side");
 
+        WritableImage topVolumeRender = new WritableImage(DATA_SIZE, DATA_SIZE);
+        updateVolumeRender(topVolumeRender, "Top");
+        WritableImage frontVolumeRender = new WritableImage(DATA_SIZE, DATA_SIZE);
+        updateVolumeRender(frontVolumeRender, "Front");
+        WritableImage sideVolumeRender = new WritableImage(DATA_SIZE, DATA_SIZE);
+        updateVolumeRender(sideVolumeRender, "Side");
+
         /*Set all the writable images to imageviews for display on the stage*/
         ImageView topSliceView = new ImageView(topSlice);
         ImageView frontSliceView = new ImageView(frontSlice);
@@ -153,7 +235,9 @@ public class Main extends Application {
         ImageView topMIPView = new ImageView(topMIPImage);
         ImageView frontMIPView = new ImageView(frontMIPImage);
         ImageView sideMIPView = new ImageView(sideMIPImage);
-
+        ImageView topVolumeView = new ImageView(topVolumeRender);
+        ImageView frontVolumeView = new ImageView(frontVolumeRender);
+        ImageView sideVolumeView = new ImageView(sideVolumeRender);
 
 
 
@@ -219,13 +303,17 @@ public class Main extends Application {
         sideVboxSlice.getChildren().addAll(sideLabel, sideSliceView, sideSlider);
         grid.add(sideVboxSlice, 3, 1);
 
-
         grid.add(topMIPView, 1, 2);
         grid.add(frontMIPView, 2, 2);
         grid.add(sideMIPView, 3, 2);
 
+        grid.add(topVolumeView, 1, 3);
+        grid.add(frontVolumeView, 2, 3);
+        grid.add(sideVolumeView, 3, 3);
 
-        Scene scene = new Scene(grid, DATA_SIZE * 4, DATA_SIZE * 4); //scene(currentpane, xpixelsWide, ypixelsWide)
+
+        /*Initialise and show a new scene on the stage with the grid added to it*/
+        Scene scene = new Scene(grid, DATA_SIZE * 4, DATA_SIZE * 4);
         stage.setScene(scene); //set that scene onto the stage
         stage.show(); //show the stage
     }
