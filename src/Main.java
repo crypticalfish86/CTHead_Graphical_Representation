@@ -182,6 +182,10 @@ public class Main extends Application {
             }
     }
 
+    private float normaliseSkinOpacity(int value) {
+            return (float) value / 100f;
+    }
+
     /*Set up the stage for launch*/
     @Override
     public void start(Stage stage) {
@@ -238,34 +242,60 @@ public class Main extends Application {
 
 
         /*Set up a sliders with a listener that updates the image of the relevant picture to the slice value of the slider*/
-        //topSlider
-        Slider topSlider = new Slider(0, 255, currentTopSlice);
-        topSlider.setBlockIncrement(1);//ensure every single image is reachable by the slider
-        topSlider.setSnapToTicks(false); //ensure there is no snapping (smooth transition through images)
-        topSlider.valueProperty().addListener((observable, oldValue, newValue) -> {
+        //topSliceSlider
+        Slider topSliceSlider = new Slider(0, 255, currentTopSlice);
+        topSliceSlider.setBlockIncrement(1);//ensure every single image is reachable by the slider
+        topSliceSlider.setSnapToTicks(false); //ensure there is no snapping (smooth transition through images)
+        topSliceSlider.valueProperty().addListener((observable, oldValue, newValue) -> {
                 currentTopSlice = newValue.intValue();
                 updateImageSlice(topSlice, "Top");
         });
 
-        //frontSlider
-        Slider frontSlider = new Slider(0, 255, currentFrontSlice);
-        frontSlider.setBlockIncrement(1); //ensure every single image is reachable by the slider
-        frontSlider.setSnapToTicks(false); //ensure there is no snapping (smooth transition through images)
-        frontSlider.valueProperty().addListener((observable, oldValue, newValue) -> {
+        //frontSliceSlider
+        Slider frontSliceSlider = new Slider(0, 255, currentFrontSlice);
+        frontSliceSlider.setBlockIncrement(1); //ensure every single image is reachable by the slider
+        frontSliceSlider.setSnapToTicks(false); //ensure there is no snapping (smooth transition through images)
+        frontSliceSlider.valueProperty().addListener((observable, oldValue, newValue) -> {
             currentFrontSlice = newValue.intValue();
             updateImageSlice(frontSlice, "Front");
         });
 
-        //sideSlider
-        Slider sideSlider = new Slider(0, 255, currentSideSlice);
-        sideSlider.setBlockIncrement(1); //ensure every single image is reachable by the slider
-        sideSlider.setSnapToTicks(false); //ensure there is no snapping (smooth transition through images)
-        sideSlider.valueProperty().addListener((observable, oldValue, newValue) -> {
+        //sideSliceSlider
+        Slider sideSliceSlider = new Slider(0, 255, currentSideSlice);
+        sideSliceSlider.setBlockIncrement(1); //ensure every single image is reachable by the slider
+        sideSliceSlider.setSnapToTicks(false); //ensure there is no snapping (smooth transition through images)
+        sideSliceSlider.valueProperty().addListener((observable, oldValue, newValue) -> {
             currentSideSlice = newValue.intValue();
             updateImageSlice(sideSlice, "Side");
         });
 
 
+        //topVolumeSlider
+        Slider topVolumeSlider = new Slider(0, 100, skinOpacity);
+        topVolumeSlider.setBlockIncrement(1);
+        topVolumeSlider.setSnapToTicks(false);
+        topVolumeSlider.valueProperty().addListener((observable, oldValue, newValue) -> {
+            skinOpacity = normaliseSkinOpacity(newValue.intValue());
+            updateVolumeRender(topVolumeRender, "Top");
+        });
+
+        //frontVolumeSlider
+        Slider frontVolumeSlider = new Slider(0, 100, skinOpacity);
+        frontVolumeSlider.setBlockIncrement(1);
+        frontVolumeSlider.setSnapToTicks(false);
+        frontVolumeSlider.valueProperty().addListener((observable, oldValue, newValue) -> {
+            skinOpacity = normaliseSkinOpacity(newValue.intValue());
+            updateVolumeRender(frontVolumeRender, "Front");
+        });
+
+        //sideVolumeSlider
+        Slider sideVolumeSlider = new Slider(0, 100, skinOpacity);
+        sideVolumeSlider.setBlockIncrement(1);
+        sideVolumeSlider.setSnapToTicks(false);
+        sideVolumeSlider.valueProperty().addListener((observable, OldValue, newValue) -> {
+            skinOpacity = normaliseSkinOpacity(newValue.intValue());
+            updateVolumeRender(sideVolumeRender, "Side");
+        });
 
         /*Set up vboxes and titles to display each view (top 3 are the slices, middle 3 are MIP, last 3 are volume renders)*/
         VBox topVboxSlice = new VBox(10);
@@ -273,7 +303,7 @@ public class Main extends Application {
         topLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
         topLabel.setMaxWidth(Double.MAX_VALUE);
         topLabel.setAlignment(Pos.CENTER);
-        topVboxSlice.getChildren().addAll(topLabel, topSliceView, topSlider);
+        topVboxSlice.getChildren().addAll(topLabel, topSliceView, topSliceSlider);
         grid.add(topVboxSlice, 1, 1);
 
         VBox frontVboxSlice = new VBox(10);
@@ -281,7 +311,7 @@ public class Main extends Application {
         frontLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold");
         frontLabel.setMaxWidth(Double.MAX_VALUE);
         frontLabel.setAlignment(Pos.CENTER);
-        frontVboxSlice.getChildren().addAll(frontLabel, frontSliceView, frontSlider);
+        frontVboxSlice.getChildren().addAll(frontLabel, frontSliceView, frontSliceSlider);
         grid.add(frontVboxSlice, 2, 1);
 
         VBox sideVboxSlice = new VBox(10);
@@ -289,16 +319,24 @@ public class Main extends Application {
         sideLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold");
         sideLabel.setMaxWidth(Double.MAX_VALUE);
         sideLabel.setAlignment(Pos.CENTER);
-        sideVboxSlice.getChildren().addAll(sideLabel, sideSliceView, sideSlider);
+        sideVboxSlice.getChildren().addAll(sideLabel, sideSliceView, sideSliceSlider);
         grid.add(sideVboxSlice, 3, 1);
 
         grid.add(topMIPView, 1, 2);
         grid.add(frontMIPView, 2, 2);
         grid.add(sideMIPView, 3, 2);
 
-        grid.add(topVolumeView, 1, 3);
-        grid.add(frontVolumeView, 2, 3);
-        grid.add(sideVolumeView, 3, 3);
+        VBox topVboxVolume = new VBox(10);
+        topVboxVolume.getChildren().addAll(topVolumeView, topVolumeSlider);
+        grid.add(topVboxVolume, 1, 3);
+
+        VBox frontVboxVolume = new VBox(10);
+        frontVboxVolume.getChildren().addAll(frontVolumeView, frontVolumeSlider);
+        grid.add(frontVboxVolume, 2, 3);
+
+        VBox sideVboxVolume = new VBox(10);
+        sideVboxVolume.getChildren().addAll(sideVolumeView, sideVolumeSlider);
+        grid.add(sideVboxVolume, 3, 3);
 
 
         /*Initialise and show a new scene on the stage with the grid added to it*/
