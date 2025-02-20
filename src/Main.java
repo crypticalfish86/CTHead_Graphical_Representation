@@ -1,5 +1,4 @@
 import java.io.*;
-import java.util.HashMap;
 import javafx.application.Application;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -21,8 +20,8 @@ public class Main extends Application {
     int currentSideSlice = 128; //the current viewed slice of the CT scan for the side view
     short min = Short.MAX_VALUE; //minimum byte value in dataset (used in normalisation, initialised at max value)
     short max = Short.MIN_VALUE; //maximum byte value in dataset (used in normalisation, initialised at min value)
-    float opacityThreshold = 0.03f;
-    float skinOpacity = 0.12f;
+    float opacityThreshold = 0.03f; //The opacity threshold the volume render needs to reach before returning a colour value
+    float skinOpacity = 0.12f; //The opacity of the skin
 
     /**
      * Reads data and places the values of each voxel in datasetVoxelByteValues
@@ -76,10 +75,9 @@ public class Main extends Application {
         for (int y = 0; y < DATA_SIZE; y++) {
             for (int x = 0; x < DATA_SIZE; x++) {
                 float val = switch (imageKey) {
-                    case "Top" -> datasetGreyValues[currentTopSlice][y][x];
                     case "Front" -> datasetGreyValues[y][currentFrontSlice][x];
                     case "Side" -> datasetGreyValues[y][x][currentSideSlice];
-                    default -> 0;
+                    default -> datasetGreyValues[currentTopSlice][y][x];
 
                 };
                 Color color = Color.color(val, val, val);
@@ -105,10 +103,9 @@ public class Main extends Application {
             float currentMaximum = min;
             for (int slice = 0; slice < DATA_SIZE; slice++) {
                 float voxelToCompare = switch (imageKey) {
-                    case "Top" -> datasetGreyValues[slice][y][x];
                     case "Front" -> datasetGreyValues[y][slice][x];
                     case "Side" -> datasetGreyValues[y][x][slice];
-                    default ->  0;
+                    default ->  datasetGreyValues[slice][y][x];
                 };
 
                 if (voxelToCompare > currentMaximum) {
@@ -128,7 +125,7 @@ public class Main extends Application {
                     float accumRed = 0f;
                     float accumGreen = 0f;
                     float accumBlue = 0f;
-                    float lighting = 1f;//TODO when depth based shading implemented this changes
+                    float lighting = 1f;
 
                     for (int slice = 0; slice < DATA_SIZE; slice++) {
                         if (accumOpacity < opacityThreshold) {
